@@ -2,6 +2,7 @@
   "success": true,
   "available": true,
   "schemaVersion": "devbridge-generation-context/v1",
+  "workflowId": "rw-stage8",
   "launchId": "launch-stage8",
   "generation": 17,
   "profileFingerprint": "profile-stage8",

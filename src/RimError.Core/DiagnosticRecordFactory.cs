@@ -64,6 +64,7 @@ internal static class DiagnosticRecordFactory
             LastOccurrence = first,
             OccurrenceCount = 1,
             RunId = raw.Metadata?.RunId,
+            WorkflowId = raw.Metadata?.WorkflowId,
             TestId = raw.Metadata?.TestId,
             OperationId = raw.Metadata?.OperationId,
             OperationName = raw.Metadata?.OperationName,

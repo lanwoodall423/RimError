@@ -2,6 +2,8 @@ namespace RimError.Core;
 
 public sealed record DiagnosticIngestionMetadata
 {
+    public string? WorkflowId { get; init; }
+
     public string? RunId { get; init; }
 
     public string? TestId { get; init; }

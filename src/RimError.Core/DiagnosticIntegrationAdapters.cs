@@ -228,6 +228,7 @@ public static class DiagnosticIntegrationAdapter
         var quicktest = IntegrationJson.Property(root, "quicktest");
         var failure = IntegrationJson.Property(root, "failure");
 
+        var workflowId = IntegrationJson.FirstString(root, "workflowId", "workflow");
         var runId = IntegrationJson.FirstString(root, "runId", "run");
         var leaseId = IntegrationJson.FirstString(root, "leaseId", "testId", "test") ??
             IntegrationJson.String(lease, "leaseId", "id");
@@ -290,6 +291,7 @@ public static class DiagnosticIntegrationAdapter
             IntegrationJson.String(quicktest, "evidence");
 
         var hasIdentity = !string.IsNullOrWhiteSpace(runId) ||
+            !string.IsNullOrWhiteSpace(workflowId) ||
             !string.IsNullOrWhiteSpace(testId) ||
             !string.IsNullOrWhiteSpace(launchId) ||
             generation is not null ||
@@ -309,6 +311,7 @@ public static class DiagnosticIntegrationAdapter
         return new DiagnosticDevBridgeContext
         {
             SourceSchema = schema,
+            WorkflowId = Bound(workflowId, 128),
             RunId = runId,
             TestId = testId,
             LeaseId = leaseId,
@@ -337,6 +340,7 @@ public static class DiagnosticIntegrationAdapter
         IntegrationJson.FirstString(
             element,
             "schemaVersion",
+            "workflowId",
             "runId",
             "launchId",
             "profileFingerprint",
@@ -499,6 +503,8 @@ public static class DiagnosticIntegrationAdapter
         string? schema)
     {
         var provenance = IntegrationJson.Property(root, "provenance");
+        var workflowId = IntegrationJson.FirstString(root, "workflowId", "workflow") ??
+            IntegrationJson.String(provenance, "workflowId", "workflow");
         var launchId = IntegrationJson.FirstString(root, "launchId", "launch") ??
             IntegrationJson.String(provenance, "launchId", "launch");
         var runId = IntegrationJson.FirstString(root, "runId", "run");
@@ -517,6 +523,7 @@ public static class DiagnosticIntegrationAdapter
             IntegrationJson.DateTimeOffset(provenance, "invocationTimestampUtc", "timestampUtc");
 
         if (string.IsNullOrWhiteSpace(launchId) &&
+            string.IsNullOrWhiteSpace(workflowId) &&
             string.IsNullOrWhiteSpace(runId) &&
             string.IsNullOrWhiteSpace(sessionId) &&
             generation is null &&
@@ -531,6 +538,7 @@ public static class DiagnosticIntegrationAdapter
         return new DiagnosticRimBridgeContext
         {
             SourceSchema = schema,
+            WorkflowId = Bound(workflowId, 128),
             RunId = Bound(runId, 160),
             SessionId = Bound(sessionId, 160),
             LaunchId = Bound(launchId, 160),
@@ -593,6 +601,8 @@ public static class DiagnosticIntegrationAdapter
             IntegrationJson.String(error, "message");
         var context = inheritedContext;
 
+        var workflowId = IntegrationJson.FirstString(root, "workflowId", "workflow") ??
+            IntegrationJson.String(metadata, "workflowId", "workflow") ?? context?.WorkflowId;
         var runId = IntegrationJson.FirstString(root, "runId", "run") ??
             IntegrationJson.String(metadata, "runId", "run") ?? context?.RunId;
         var sessionId = IntegrationJson.FirstString(root, "sessionId", "session") ??
@@ -605,6 +615,7 @@ public static class DiagnosticIntegrationAdapter
         return new DiagnosticBridgeOperation
         {
             OperationId = Bound(operationId, 160),
+            WorkflowId = Bound(workflowId, 128),
             OperationName = Bound(name, 200),
             EventType = Bound(eventType, 96),
             Status = Bound(status, 48),
@@ -688,6 +699,7 @@ public static class DiagnosticIntegrationAdapter
         return new DiagnosticDevBridgeContext
         {
             SourceSchema = MergeText(left.SourceSchema, right.SourceSchema, "dev.schema", warnings),
+            WorkflowId = MergeText(left.WorkflowId, right.WorkflowId, "dev.workflow", warnings),
             RunId = MergeText(left.RunId, right.RunId, "dev.run", warnings),
             TestId = MergeText(left.TestId, right.TestId, "dev.test", warnings),
             LeaseId = MergeText(left.LeaseId, right.LeaseId, "dev.lease", warnings),
@@ -720,6 +732,7 @@ public static class DiagnosticIntegrationAdapter
         return new DiagnosticRimBridgeContext
         {
             SourceSchema = MergeText(left.SourceSchema, right.SourceSchema, "rim.schema", warnings),
+            WorkflowId = MergeText(left.WorkflowId, right.WorkflowId, "rim.workflow", warnings),
             RunId = MergeText(left.RunId, right.RunId, "rim.run", warnings),
             SessionId = MergeText(left.SessionId, right.SessionId, "rim.session", warnings),
             LaunchId = MergeText(left.LaunchId, right.LaunchId, "rim.launch", warnings),
@@ -777,6 +790,7 @@ public static class DiagnosticIntegrationAdapter
         return left with
         {
             OperationId = left.OperationId ?? right.OperationId,
+            WorkflowId = left.WorkflowId ?? right.WorkflowId,
             OperationName = left.OperationName ?? right.OperationName,
             EventType = PreferEvent(left.EventType, right.EventType),
             Status = PreferStatus(left.Status, right.Status),
