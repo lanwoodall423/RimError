@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "devbridge-agent-snapshot/v1",
+  "epoch": "epoch-stage8",
+  "runtimeSlotId": "slot-stage8",
+  "sequence": 9,
+  "generation": 17,
+  "phase": "READY",
+  "acceptedProfile": {
+    "mode": "projects",
+    "projectCount": 1,
+    "projects": ["fixture-mod"],
+    "fingerprint": "profile-stage8",
+    "baselineFingerprint": "baseline-stage8"
+  },
+  "requestingAgentLease": {
+    "state": "HELD",
+    "leaseId": "lease-stage8",
+    "generation": 17
+  },
+  "quicktest": {
+    "state": "PASSED"
+  }
+}
