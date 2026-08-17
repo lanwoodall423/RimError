@@ -1,0 +1,73 @@
+# RimError integration contract
+
+RimError accepts optional JSON projections. It has no runtime or compile-time dependency on
+DevBridge2 or RimBridgeServer. Missing, unavailable, or unrecognized integration data leaves the
+normal diagnostic pipeline usable; a supplied malformed file is reported on stderr and does not
+silently become an asserted correlation.
+
+## Input envelope
+
+The stable interchange envelope is `rimerror-integration/v1`:
+
+```json
+{
+  "schemaVersion": "rimerror-integration/v1",
+  "devBridge": {
+    "schemaVersion": "devbridge-generation-context/v1",
+    "runId": "run-17",
+    "testId": "lease-abc",
+    "launchId": "launch-17",
+    "generation": 17,
+    "processId": 4242,
+    "profileFingerprint": "sha256..."
+  },
+  "rimBridge": {
+    "operations": [
+      {
+        "operationId": "op-1",
+        "capabilityId": "mymod/create_assembler",
+        "status": "Completed",
+        "success": true,
+        "startedAtUtc": "2026-08-17T12:00:01Z",
+        "completedAtUtc": "2026-08-17T12:00:02Z",
+        "runId": "run-17",
+        "launchId": "launch-17",
+        "generation": 17
+      }
+    ]
+  }
+}
+```
+
+The CLI also accepts current native projections directly:
+
+- DevBridge2 `devbridge-agent-snapshot/v1`, `devbridge-agent-event/v1`,
+  `devbridge-generation-context/v1`, and bounded quicktest/failure objects.
+- RimBridgeServer operation envelopes/events, `rimbridge/list_operation_events` results,
+  `rimbridge/list_logs` results, and DevBridge-routed results with `provenance`.
+
+The adapters retain only bounded identity, operation, timestamp, status, and error fields. They do
+not retain bridge tokens, complete tool results, or duplicate raw logs.
+
+## CLI setup
+
+Capture the JSON outputs from the owning tools, then pass them when ingesting the log:
+
+```text
+rimerror ingest Player.log --devbridge agent-snapshot.json --rimbridge bridge-events.json
+```
+
+`--integration <file>` accepts the combined envelope. `--run`, `--test`, `--operation`, and
+`--operation-name` remain explicit caller metadata overrides. Multiple bridge files may be supplied.
+
+## Correlation contract
+
+RimError can attach `run`, `test`, `op`, `opName`, `corr`, and bounded `corrSignals` to a stored
+diagnostic. Fingerprints never include these fields. High confidence requires an explicit operation
+ID, or matching bridge identity plus a bounded time window and semantic/log context. Medium confidence
+requires matching identity plus time. Time proximity alone is rejected. Mismatched run, launch, or
+generation identities and stale operations are not correlated. Tied candidates remain unassigned and
+are exposed as `corrCandidates` with low confidence for drill-down.
+
+DevBridge2 remains the authority for lifecycle, leases, generations, and profiles. RimBridgeServer
+remains the authority for live operations and logs. No change to either repository is required.
