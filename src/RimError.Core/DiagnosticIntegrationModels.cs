@@ -52,6 +52,10 @@ public sealed record DiagnosticIntegrationState
 
 public sealed record DiagnosticDevBridgeContext
 {
+    [JsonPropertyName("workflowId")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? WorkflowId { get; init; }
+
     [JsonPropertyName("schema")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? SourceSchema { get; init; }
@@ -143,6 +147,10 @@ public sealed record DiagnosticDevBridgeContext
 
 public sealed record DiagnosticRimBridgeContext
 {
+    [JsonPropertyName("workflowId")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? WorkflowId { get; init; }
+
     [JsonPropertyName("schema")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? SourceSchema { get; init; }
@@ -178,6 +186,10 @@ public sealed record DiagnosticRimBridgeContext
 
 public sealed record DiagnosticBridgeOperation
 {
+    [JsonPropertyName("workflowId")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? WorkflowId { get; init; }
+
     [JsonPropertyName("id")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? OperationId { get; init; }

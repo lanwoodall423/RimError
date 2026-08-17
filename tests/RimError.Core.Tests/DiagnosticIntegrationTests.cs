@@ -25,6 +25,7 @@ public sealed class DiagnosticIntegrationTests
         Assert.NotNull(combined);
         var dev = combined!.DevBridge;
         Assert.NotNull(dev);
+        Assert.Equal("rw-stage8", dev.WorkflowId);
         Assert.Equal("epoch-stage8", dev.SessionId);
         Assert.Equal("lease-stage8", dev.LeaseId);
         Assert.Equal("launch-stage8", dev.LaunchId);
@@ -56,6 +57,7 @@ public sealed class DiagnosticIntegrationTests
             log.OperationId == "op-create" &&
             log.CapabilityId == "mymod/create_assembler");
         Assert.Equal("launch-stage8", combined.RimBridge!.LaunchId);
+        Assert.Equal("rw-stage8", combined.RimBridge.WorkflowId);
         Assert.Equal(17, combined.RimBridge.Generation);
     }
 
@@ -78,6 +80,7 @@ public sealed class DiagnosticIntegrationTests
         Assert.Equal("lease-stage8", diagnostic.TestId);
         Assert.Equal("high", diagnostic.CorrelationConfidence);
         Assert.Contains("shared-run", diagnostic.CorrelationSignals!);
+        Assert.Contains("shared-workflow", diagnostic.CorrelationSignals!);
         Assert.Contains("shared-generation", diagnostic.CorrelationSignals!);
         Assert.Contains("matching-operation-context", diagnostic.CorrelationSignals!);
         var show = DiagnosticJson.Serialize(diagnostic, includeStack: true);
@@ -140,6 +143,32 @@ public sealed class DiagnosticIntegrationTests
     }
 
     [Fact]
+    public async Task Workflow_context_without_rimbridge_operation_preserves_identity_without_guessing()
+    {
+        var integration = new DiagnosticIntegrationState
+        {
+            DevBridge = new DiagnosticDevBridgeContext
+            {
+                WorkflowId = "rw-no-operation",
+                Generation = 4
+            }
+        };
+        var result = await Ingest(
+            "[2026-08-17T12:00:03Z] ERROR NullReferenceException: no routed operation",
+            new DiagnosticIngestionMetadata
+            {
+                WorkflowId = "rw-no-operation",
+                Integration = integration
+            });
+
+        var diagnostic = Assert.Single(
+            DiagnosticIntegrationCorrelator.Apply(result.ToSnapshot(), integration).Items);
+        Assert.Equal("rw-no-operation", diagnostic.WorkflowId);
+        Assert.Null(diagnostic.OperationId);
+        Assert.Null(diagnostic.CorrelationConfidence);
+    }
+
+    [Fact]
     public async Task Mismatched_run_ids_do_not_correlate_even_when_times_match()
     {
         var integration = LoadBoth();
@@ -154,6 +183,79 @@ public sealed class DiagnosticIntegrationTests
 
         var diagnostic = Assert.Single(snapshot.Items);
         Assert.Equal("run-different", diagnostic.RunId);
+        Assert.Null(diagnostic.OperationId);
+        Assert.Null(diagnostic.CorrelationConfidence);
+    }
+
+    [Fact]
+    public async Task Mismatched_workflow_ids_do_not_correlate_even_when_semantics_match()
+    {
+        var integration = new DiagnosticIntegrationState
+        {
+            DevBridge = new DiagnosticDevBridgeContext
+            {
+                WorkflowId = "rw-current",
+                Generation = 4
+            },
+            Operations =
+            [
+                new DiagnosticBridgeOperation
+                {
+                    OperationId = "op-other-workflow",
+                    WorkflowId = "rw-other",
+                    OperationName = "mymod/create_assembler",
+                    Generation = 4,
+                    TimestampUtc = Start.AddSeconds(1)
+                }
+            ]
+        };
+        var result = await Ingest(
+            "[2026-08-17T12:00:01Z] ERROR NullReferenceException: mymod/create_assembler",
+            new DiagnosticIngestionMetadata
+            {
+                WorkflowId = "rw-current",
+                Integration = integration
+            });
+
+        var diagnostic = Assert.Single(
+            DiagnosticIntegrationCorrelator.Apply(result.ToSnapshot(), integration).Items);
+        Assert.Equal("rw-current", diagnostic.WorkflowId);
+        Assert.Null(diagnostic.OperationId);
+        Assert.Null(diagnostic.CorrelationConfidence);
+    }
+
+    [Fact]
+    public async Task Mismatched_generations_do_not_correlate_even_when_workflow_matches()
+    {
+        var integration = new DiagnosticIntegrationState
+        {
+            DevBridge = new DiagnosticDevBridgeContext
+            {
+                WorkflowId = "rw-current",
+                Generation = 4
+            },
+            Operations =
+            [
+                new DiagnosticBridgeOperation
+                {
+                    OperationId = "op-old-generation",
+                    WorkflowId = "rw-current",
+                    OperationName = "mymod/create_assembler",
+                    Generation = 3,
+                    TimestampUtc = Start.AddSeconds(1)
+                }
+            ]
+        };
+        var result = await Ingest(
+            "[2026-08-17T12:00:01Z] ERROR NullReferenceException: mymod/create_assembler",
+            new DiagnosticIngestionMetadata
+            {
+                WorkflowId = "rw-current",
+                Integration = integration
+            });
+
+        var diagnostic = Assert.Single(
+            DiagnosticIntegrationCorrelator.Apply(result.ToSnapshot(), integration).Items);
         Assert.Null(diagnostic.OperationId);
         Assert.Null(diagnostic.CorrelationConfidence);
     }

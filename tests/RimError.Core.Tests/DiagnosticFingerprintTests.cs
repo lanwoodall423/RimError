@@ -24,6 +24,7 @@ public sealed class DiagnosticFingerprintTests
             LastOccurrence = DateTimeOffset.Parse("2026-01-02T00:00:00Z"),
             OccurrenceCount = 12,
             RunId = "run-2",
+            WorkflowId = "rw-2",
             OperationId = "operation-2",
             BaselineState = BaselineState.Changed,
             Confidence = 0.8,

@@ -14,6 +14,7 @@ The stable interchange envelope is `rimerror-integration/v1`:
   "schemaVersion": "rimerror-integration/v1",
   "devBridge": {
     "schemaVersion": "devbridge-generation-context/v1",
+    "workflowId": "rw-17",
     "runId": "run-17",
     "testId": "lease-abc",
     "launchId": "launch-17",
@@ -25,6 +26,7 @@ The stable interchange envelope is `rimerror-integration/v1`:
     "operations": [
       {
         "operationId": "op-1",
+        "workflowId": "rw-17",
         "capabilityId": "mymod/create_assembler",
         "status": "Completed",
         "success": true,
@@ -69,5 +71,12 @@ requires matching identity plus time. Time proximity alone is rejected. Mismatch
 generation identities and stale operations are not correlated. Tied candidates remain unassigned and
 are exposed as `corrCandidates` with low confidence for drill-down.
 
+workflowId is optional caller context shared by the participating surfaces; it does not replace
+runId, lease, generation, launch, or operation identity. RimError may preserve it on the diagnostic
+record, but workflow identity alone never correlates an operation. Explicit workflow or generation
+mismatches fail closed, and ambiguous nearby operations remain unassigned. Older envelopes that
+omit the field remain valid. The field is not an input to failure fingerprints.
+
 DevBridge2 remains the authority for lifecycle, leases, generations, and profiles. RimBridgeServer
-remains the authority for live operations and logs. No change to either repository is required.
+remains the authority for live operations and logs. No durable show-run index is created; callers
+use the owning DevBridge evidence/generation commands and rimerror show <id> for drill-down.

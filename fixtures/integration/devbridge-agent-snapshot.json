@@ -1,5 +1,6 @@
 {
   "schemaVersion": "devbridge-agent-snapshot/v1",
+  "workflowId": "rw-stage8",
   "epoch": "epoch-stage8",
   "runtimeSlotId": "slot-stage8",
   "sequence": 9,

@@ -1,6 +1,8 @@
 # RimError
 
 RimError turns RimWorld/mod logs into deterministic, bounded diagnostics. It has no RimWorld or LLM dependency.
+When RimTest is present, agents should start with RimTest and use RimError directly only for the
+diagnostic drill-down it requests.
 
 ## Normal workflow
 

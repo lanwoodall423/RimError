@@ -35,10 +35,12 @@ public static class DiagnosticIntegrationCorrelator
         DiagnosticIntegrationState integration)
     {
         var contextRunId = integration.DevBridge?.RunId ?? integration.RimBridge?.RunId;
+        var contextWorkflowId = integration.DevBridge?.WorkflowId ?? integration.RimBridge?.WorkflowId;
         var contextTestId = integration.DevBridge?.TestId ?? integration.DevBridge?.LeaseId;
         var baseRecord = diagnostic with
         {
             RunId = diagnostic.RunId ?? contextRunId,
+            WorkflowId = diagnostic.WorkflowId ?? contextWorkflowId,
             TestId = diagnostic.TestId ?? contextTestId
         };
 
@@ -48,7 +50,8 @@ public static class DiagnosticIntegrationCorrelator
         }
 
         if (HasContextConflict(integration) ||
-            ConflictsWithIntegrationRun(baseRecord, integration))
+            ConflictsWithIntegrationRun(baseRecord, integration) ||
+            ConflictsWithIntegrationWorkflow(baseRecord, integration))
         {
             return baseRecord;
         }
@@ -125,6 +128,7 @@ public static class DiagnosticIntegrationCorrelator
         DiagnosticIntegrationState integration)
     {
         if (ConflictsWithDiagnosticRun(diagnostic, operation) ||
+            ConflictsWithDiagnosticWorkflow(diagnostic, operation) ||
             ConflictsWithBridgeContext(operation, integration))
         {
             return null;
@@ -215,6 +219,12 @@ public static class DiagnosticIntegrationCorrelator
             signals.Add("shared-run");
         }
 
+        if (Same(diagnostic.WorkflowId, operation.WorkflowId))
+        {
+            count++;
+            signals.Add("shared-workflow");
+        }
+
         if (Same(integration.DevBridge?.LaunchId, operation.LaunchId) ||
             Same(integration.RimBridge?.LaunchId, operation.LaunchId))
         {
@@ -264,6 +274,15 @@ public static class DiagnosticIntegrationCorrelator
             !diagnostic.RunId.Equals(operation.RunId, StringComparison.Ordinal);
     }
 
+    private static bool ConflictsWithDiagnosticWorkflow(
+        DiagnosticRecord diagnostic,
+        DiagnosticBridgeOperation operation)
+    {
+        return diagnostic.WorkflowId is not null &&
+            operation.WorkflowId is not null &&
+            !diagnostic.WorkflowId.Equals(operation.WorkflowId, StringComparison.Ordinal);
+    }
+
     private static bool ConflictsWithIntegrationRun(
         DiagnosticRecord diagnostic,
         DiagnosticIntegrationState integration)
@@ -274,12 +293,29 @@ public static class DiagnosticIntegrationCorrelator
             !diagnostic.RunId.Equals(runId, StringComparison.Ordinal);
     }
 
+    private static bool ConflictsWithIntegrationWorkflow(
+        DiagnosticRecord diagnostic,
+        DiagnosticIntegrationState integration)
+    {
+        var workflowId = integration.DevBridge?.WorkflowId ?? integration.RimBridge?.WorkflowId;
+        return diagnostic.WorkflowId is not null &&
+            workflowId is not null &&
+            !diagnostic.WorkflowId.Equals(workflowId, StringComparison.Ordinal);
+    }
+
     private static bool ConflictsWithBridgeContext(
         DiagnosticBridgeOperation operation,
         DiagnosticIntegrationState integration)
     {
         var dev = integration.DevBridge;
         var rim = integration.RimBridge;
+        if (operation.WorkflowId is not null &&
+            ((dev?.WorkflowId is not null && !Same(dev.WorkflowId, operation.WorkflowId)) ||
+             (rim?.WorkflowId is not null && !Same(rim.WorkflowId, operation.WorkflowId))))
+        {
+            return true;
+        }
+
         if (operation.LaunchId is not null &&
             ((dev?.LaunchId is not null && !Same(dev.LaunchId, operation.LaunchId)) ||
              (rim?.LaunchId is not null && !Same(rim.LaunchId, operation.LaunchId))))
@@ -306,6 +342,13 @@ public static class DiagnosticIntegrationCorrelator
 
     private static bool HasContextConflict(DiagnosticIntegrationState integration)
     {
+        if (integration.DevBridge?.WorkflowId is { } devWorkflow &&
+            integration.RimBridge?.WorkflowId is { } rimWorkflow &&
+            !devWorkflow.Equals(rimWorkflow, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
         if (integration.DevBridge?.RunId is { } devRun &&
             integration.RimBridge?.RunId is { } rimRun &&
             !devRun.Equals(rimRun, StringComparison.Ordinal))
@@ -342,11 +385,13 @@ public static class DiagnosticIntegrationCorrelator
         }
 
         return integration.Warnings?.Any(warning =>
+            warning.StartsWith("dev.workflow:conflict", StringComparison.Ordinal) ||
             warning.StartsWith("dev.launch:conflict", StringComparison.Ordinal) ||
             warning.StartsWith("dev.gen:conflict", StringComparison.Ordinal) ||
             warning.StartsWith("dev.pid:conflict", StringComparison.Ordinal) ||
             warning.StartsWith("dev.profile:conflict", StringComparison.Ordinal) ||
             warning.StartsWith("rim.launch:conflict", StringComparison.Ordinal) ||
+            warning.StartsWith("rim.workflow:conflict", StringComparison.Ordinal) ||
             warning.StartsWith("rim.gen:conflict", StringComparison.Ordinal) ||
             warning.StartsWith("rim.pid:conflict", StringComparison.Ordinal) ||
             warning.StartsWith("rim.profile:conflict", StringComparison.Ordinal)) == true;
