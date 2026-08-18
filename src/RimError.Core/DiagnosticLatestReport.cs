@@ -116,6 +116,25 @@ public static class DiagnosticLatestReportBuilder
         "Partial"
     };
 
+    /// <summary>
+    /// Returns a report input scoped to one completed run. The causal graph is
+    /// discarded because it may have been computed from records belonging to
+    /// another run in the persistent store.
+    /// </summary>
+    public static DiagnosticStoreSnapshot FilterByRun(
+        DiagnosticStoreSnapshot? snapshot,
+        string runId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(runId);
+        return (snapshot ?? new DiagnosticStoreSnapshot()) with
+        {
+            Items = (snapshot?.Items ?? [])
+                .Where(item => string.Equals(item.RunId, runId, StringComparison.Ordinal))
+                .ToArray(),
+            CausalAnalysis = null
+        };
+    }
+
     public static DiagnosticLatestReport Build(
         DiagnosticStoreSnapshot? snapshot,
         bool includeAll = false,
