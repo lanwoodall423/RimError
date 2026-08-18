@@ -343,8 +343,10 @@ internal static class Program
         var parsed = ParseStoreOption(args);
         var json = false;
         var includeAll = false;
-        foreach (var argument in parsed.Arguments)
+        string? runId = null;
+        for (int index = 0; index < parsed.Arguments.Count; index++)
         {
+            string argument = parsed.Arguments[index];
             switch (argument)
             {
                 case "--json":
@@ -353,6 +355,9 @@ internal static class Program
                 case "--all":
                     includeAll = true;
                     break;
+                case "--run":
+                    runId = ReadOptionValue(parsed.Arguments, ref index, "--run");
+                    break;
                 default:
                     RejectUnknownOption(argument);
                     break;
@@ -360,6 +365,11 @@ internal static class Program
         }
 
         var snapshot = await ReadSnapshotAsync(parsed.StorePath);
+        if (!string.IsNullOrWhiteSpace(runId))
+        {
+            snapshot = DiagnosticLatestReportBuilder.FilterByRun(snapshot, runId);
+        }
+
         var report = DiagnosticLatestReportBuilder.Build(snapshot, includeAll);
         if (json)
         {
@@ -648,7 +658,7 @@ internal static class Program
         Console.WriteLine("  ingest <path> [--store <path>] [--project <path>] [--run <id>] [--test <id>] [--operation <id>]");
         Console.WriteLine("  ingest --stdin [--store <path>] [--project <path>] [--devbridge <json>] [--rimbridge <json>]");
         Console.WriteLine("  status [--store <path>]");
-        Console.WriteLine("  latest [--json] [--all] [--store <path>]");
+        Console.WriteLine("  latest [--json] [--all] [--run <id>] [--store <path>]");
         Console.WriteLine("  show <id> [--store <path>]");
         Console.WriteLine("  baseline create [name] | list | show <name>");
         Console.WriteLine("  compare [--baseline <name>] [--json] [--all]");

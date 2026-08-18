@@ -50,6 +50,46 @@ public sealed class PersistenceAndReportingTests
     }
 
     [Fact]
+    public void Run_filter_excludes_nearby_diagnostics_and_discards_old_causal_graph()
+    {
+        var snapshot = new DiagnosticStoreSnapshot
+        {
+            CausalAnalysis = new DiagnosticCausalAnalysis
+            {
+                Groups = []
+            },
+            Items =
+            [
+                new DiagnosticRecord
+                {
+                    Id = "d-current",
+                    Severity = DiagnosticSeverity.Error,
+                    Category = "runtime",
+                    Message = "current run",
+                    RunId = "run-current"
+                },
+                new DiagnosticRecord
+                {
+                    Id = "d-nearby",
+                    Severity = DiagnosticSeverity.Error,
+                    Category = "runtime",
+                    Message = "nearby run",
+                    RunId = "run-nearby"
+                }
+            ]
+        };
+
+        var filtered = DiagnosticLatestReportBuilder.FilterByRun(snapshot, "run-current");
+        var report = DiagnosticLatestReportBuilder.Build(filtered);
+
+        var diagnostic = Assert.Single(filtered.Items);
+        Assert.Equal("d-current", diagnostic.Id);
+        Assert.Null(filtered.CausalAnalysis);
+        Assert.Contains("d-current", DiagnosticJson.Serialize(report), StringComparison.Ordinal);
+        Assert.DoesNotContain("d-nearby", DiagnosticJson.Serialize(report), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void One_error_report_contains_only_compact_actionable_context()
     {
         var snapshot = Snapshot(
