@@ -1,14 +1,19 @@
 # RimError
 
+> Moved into the canonical [RimLiaison](https://github.com/lanwoodall423/RimLiaison) repository.
+> Development, tests, and maintained agent handoffs now live there. This repository is retained for
+> history and the stable `rimerror` direct drill-down contract; use `rimliaison` first in a target
+> repository.
+
 RimError turns RimWorld/mod logs into deterministic, bounded diagnostics. It has no RimWorld or LLM dependency.
-When RimTest is present, agents should start with RimTest and use RimError directly only for the
+When RimLiaison is present, agents should start with RimLiaison and use RimError directly only for the
 diagnostic drill-down it requests.
 
 ## Normal workflow
 
 ```text
 make change
-→ rimtest affected --run --json
+→ rimliaison affected --run --json
 → if a diagnostic id is returned, rimerror show <diagnostic-id>
 → act on the returned root cause and edit again
 ```
@@ -41,9 +46,9 @@ rimerror export --json
 
 The default store is `.rimerror/latest.json`; use `--store <path>` or `RIMERROR_STATE_PATH` to override it. `show` and `latest --all` expose bounded evidence; default JSON omits stacks, raw logs, nulls, and warning-only detail. Baselines retain schema, fingerprint, RimWorld, and mod-profile metadata and fail safely when incompatible.
 
-RimTest normally supplies a bounded, DevBridge-owned, generation-scoped semantic source and
-calls `latest --run <run-id>` to prevent nearby-run cross-contamination. Agents should not read
-Player.log or configure RimError paths in the normal RimTest loop; explicit paths remain a
+RimLiaison normally supplies a bounded, DevBridge-owned, generation-scoped semantic source and
+uses RimError.Core in-process to prevent nearby-run cross-contamination. Agents should not read
+Player.log or configure RimError paths in the normal RimLiaison loop; explicit paths remain a
 fallback for unusual environments.
 
 Exit codes: `0` success/clean, `1` detected actionable diagnostics, `2` RimError or usage failure.
@@ -60,5 +65,5 @@ dotnet test RimError.sln --configuration Release
 
 CI guarantee: the Windows offline workflow builds the Release solution and runs the complete
 deterministic xUnit suite. RimError remains the parser, root-cause, and correlation authority; it
-does not manage RimWorld. The pinned no-RimWorld cross-stack contract gate is owned by RimTest and
+does not manage RimWorld. The pinned no-RimWorld cross-stack contract gate is owned by RimLiaison and
 checks the `rimerror-integration/v1` handoff and correlated diagnostic projection.
